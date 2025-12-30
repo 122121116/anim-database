@@ -62,8 +62,49 @@
             justify-content: center;
         }
 
-        /* 添加按钮样式 */
-        .add-card {
+        /* 悬停显示类型 */
+        .image-card {
+            position: relative;
+        }
+        .image-card .genre-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 150px; /* Match img height */
+            background-color: rgba(0,0,0,0.7);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none; /* Let click pass through */
+        }
+        .image-card:hover .genre-overlay {
+            opacity: 1;
+        }
+        
+        /* 详情页增强 */
+        .character-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            width: 100%;
+            margin-top: 20px;
+        }
+        .char-card {
+            border: 1px solid #eee;
+            padding: 10px;
+            text-align: center;
+            border-radius: 8px;
+        }
+        .char-card img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 4px;
+        
             border: 2px dashed #aaa;
             background-color: #f9f9f9;
             display: flex;
@@ -190,6 +231,8 @@
             width: 90%;
             max-width: 500px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            max-height: 85vh; /* 限制最大高度为视口高度的 85% */
+            overflow-y: auto; /* 内容超出时显示垂直滚动条 */
         }
         .form-group {
             margin-bottom: 15px;
@@ -235,6 +278,13 @@
             background-color: #218838;
         }
 
+        .view {
+            display: none; /* 默认隐藏所有视图 */
+        }
+        .view.active {
+            display: block; /* 激活时显示 */
+        }
+
         /* 响应式调整 */
         @media (max-width: 600px) {
             .image-grid {
@@ -246,9 +296,12 @@
 <body>
 
 <div class="container">
+
     <!-- 界面一：列表 -->
     <div id="listView" class="view">
-        <h1 style="text-align: center; margin-bottom: 30px; color: #333;">图片列表</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+            <h1 style="margin: 0; color: #333;">番剧列表</h1>
+        </div>
         <div class="image-grid" id="imageGrid">
             <!-- 内容由 JS 生成 -->
         </div>
@@ -274,214 +327,8 @@
     </div>
 </div>
 
-<!-- 添加内容模态框 -->
-<div id="addModal" class="modal-overlay">
-    <div class="modal-content">
-        <h2 style="margin-top:0;">添加新图片</h2>
-        <div class="form-group">
-            <label for="newTitle">标题</label>
-            <input type="text" id="newTitle" placeholder="请输入标题">
-        </div>
-        <div class="form-group">
-            <label for="newImgSrc">图片路径</label>
-            <input type="text" id="newImgSrc" placeholder="输入图片路径 (例如: front/public/1.png) 或 URL">
-        </div>
-        <div class="form-group">
-            <label for="newDesc">详细描述</label>
-            <textarea id="newDesc" placeholder="请输入详细描述信息"></textarea>
-        </div>
-        <div class="modal-actions">
-            <button class="btn-cancel" onclick="closeAddModal()">取消</button>
-            <button class="btn-submit" onclick="addNewImage()">确定添加</button>
-        </div>
-    </div>
-</div>
-
-<script>
-    // 初始数据
-    let images = [
-        {
-            id: 1,
-            src: 'front/public/1.png',
-            title: '示例图片 1',
-            desc: '这是第一张图片的详细描述信息。这里展示了更多关于该图片的背景故事、参数或其他相关内容。点击左上角的返回按钮可以回到列表页面。'
-        },
-        {
-            id: 2,
-            src: 'front/public/2.png',
-            title: '示例图片 2',
-            desc: '这是第二张图片的详细描述信息。这张图片展示了不同的内容。你可以在这里放置任何你想展示的详细文本信息，例如图片拍摄时间、地点等。'
-        }
-    ];
-
-    // 分页设置
-    const pageSize = 9;
-    let currentPage = 1;
-
-    // DOM 元素
-    const listView = document.getElementById('listView');
-    const detailView = document.getElementById('detailView');
-    const imageGrid = document.getElementById('imageGrid');
-    const pagination = document.getElementById('pagination');
-    const addModal = document.getElementById('addModal');
-    
-    // 详情页元素
-    const detailImage = document.getElementById('detailImage');
-    const detailTitle = document.getElementById('detailTitle');
-    const detailDesc = document.getElementById('detailDesc');
-
-    // 输入框元素
-    const newTitleInput = document.getElementById('newTitle');
-    const newImgSrcInput = document.getElementById('newImgSrc');
-    const newDescInput = document.getElementById('newDesc');
-
-    // 渲染列表（包含分页逻辑）
-    function renderList() {
-        imageGrid.innerHTML = '';
-        pagination.innerHTML = '';
-
-        // 计算总项目数：现有图片 + 1个添加按钮
-        const totalItems = images.length + 1;
-        const totalPages = Math.ceil(totalItems / pageSize);
-        
-        // 确保 currentPage 有效
-        if (currentPage > totalPages) currentPage = totalPages;
-        if (currentPage < 1) currentPage = 1;
-
-        // 计算当前页的显示范围
-        const startIndex = (currentPage - 1) * pageSize;
-        const endIndex = Math.min(startIndex + pageSize, totalItems);
-
-        // 渲染当前页的内容
-        for (let i = startIndex; i < endIndex; i++) {
-            if (i < images.length) {
-                // 渲染图片卡片
-                const img = images[i];
-                const card = document.createElement('div');
-                card.className = 'image-card';
-                card.onclick = () => showDetail(img);
-                card.innerHTML = `
-                    <img src="${img.src}" alt="${img.title}" onerror="this.src='https://via.placeholder.com/200x150?text=Image+Not+Found'">
-                    <div class="title">${img.title}</div>
-                `;
-                imageGrid.appendChild(card);
-            } else {
-                // 渲染添加按钮（最后一个位置）
-                const addCard = document.createElement('div');
-                addCard.className = 'image-card add-card';
-                addCard.onclick = showAddModal;
-                addCard.innerHTML = `<div class="add-icon">+</div>`;
-                addCard.title = "添加新内容";
-                imageGrid.appendChild(addCard);
-            }
-        }
-
-        // 渲染分页控件
-        if (totalPages > 1) {
-            // 上一页
-            const prevBtn = document.createElement('button');
-            prevBtn.className = 'page-btn';
-            prevBtn.innerText = '<';
-            prevBtn.disabled = currentPage === 1;
-            prevBtn.onclick = () => changePage(currentPage - 1);
-            pagination.appendChild(prevBtn);
-
-            // 页码
-            for (let p = 1; p <= totalPages; p++) {
-                const pageBtn = document.createElement('button');
-                pageBtn.className = `page-btn ${p === currentPage ? 'active' : ''}`;
-                pageBtn.innerText = p;
-                pageBtn.onclick = () => changePage(p);
-                pagination.appendChild(pageBtn);
-            }
-
-            // 下一页
-            const nextBtn = document.createElement('button');
-            nextBtn.className = 'page-btn';
-            nextBtn.innerText = '>';
-            nextBtn.disabled = currentPage === totalPages;
-            nextBtn.onclick = () => changePage(currentPage + 1);
-            pagination.appendChild(nextBtn);
-        }
-    }
-
-    // 切换页面
-    function changePage(page) {
-        currentPage = page;
-        renderList();
-    }
-
-    // 显示详情页
-    function showDetail(imgData) {
-        detailImage.src = imgData.src;
-        detailImage.onerror = function() {
-            this.src = 'https://via.placeholder.com/600x400?text=Image+Not+Found';
-        };
-        detailTitle.textContent = imgData.title;
-        detailDesc.textContent = imgData.desc;
-        
-        listView.style.display = 'none';
-        detailView.style.display = 'block';
-    }
-
-    // 显示列表页
-    function showList() {
-        listView.style.display = 'block';
-        detailView.style.display = 'none';
-    }
-
-    // 模态框操作
-    function showAddModal() {
-        // 清空输入
-        newTitleInput.value = '';
-        newImgSrcInput.value = '';
-        newDescInput.value = '';
-        addModal.style.display = 'flex';
-    }
-
-    function closeAddModal() {
-        addModal.style.display = 'none';
-    }
-
-    function addNewImage() {
-        const title = newTitleInput.value.trim();
-        const src = newImgSrcInput.value.trim();
-        const desc = newDescInput.value.trim();
-
-        if (!title) {
-            alert('请输入标题');
-            return;
-        }
-
-        const newImg = {
-            id: Date.now(), // 简单的 ID 生成
-            title: title,
-            src: src || 'https://via.placeholder.com/200x150?text=No+Image', // 默认图
-            desc: desc || '暂无描述'
-        };
-
-        images.push(newImg);
-        closeAddModal();
-        
-        // 跳转到最后一页查看新添加的项
-        // 计算新总数 -> 新总页数
-        const totalItems = images.length + 1;
-        const totalPages = Math.ceil(totalItems / pageSize);
-        currentPage = totalPages;
-        
-        renderList();
-    }
-
-    // 点击模态框外部关闭
-    addModal.onclick = function(event) {
-        if (event.target === addModal) {
-            closeAddModal();
-        }
-    }
-
-    // 初始化
-    renderList();
-</script>
+<!-- 引入 JS 文件 -->
+<script type="module" src="front/src/app.js"></script>
 
 </body>
 </html>
