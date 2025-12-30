@@ -8,7 +8,8 @@ export const elements = {
     detailImage: null,
     detailTitle: null,
     detailDesc: null,
-    characterGrid: null
+    characterGrid: null,
+    charTitle: null
 };
 
 export function initDomElements() {
@@ -21,6 +22,7 @@ export function initDomElements() {
     elements.detailTitle = document.getElementById('detailTitle');
     elements.detailDesc = document.getElementById('detailDesc');
     elements.characterGrid = document.getElementById('characterGrid');
+    elements.charTitle = document.getElementById('charTitle');
 }
 
 export function switchView(targetView) {
@@ -57,7 +59,12 @@ export function renderList(state, handlers) {
             card.className = 'image-card';
             card.onclick = () => onDetail(item.aid);
             
-            const genreText = (item.genres && item.genres.length > 0) ? item.genres.join(' / ') : '未知类型';
+            let genreText = '未知类型';
+            if (Array.isArray(item.genres)) {
+                genreText = item.genres.join(' / ');
+            } else if (typeof item.genres === 'string') {
+                genreText = item.genres;
+            }
             
             card.innerHTML = `
                 <img src="${item.cover_path || item.cover}" alt="${item.name}" onerror="this.src='https://via.placeholder.com/200x150?text=No+Image'">

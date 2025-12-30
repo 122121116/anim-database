@@ -95,7 +95,7 @@ def get_animations():
                 "name": row[1],
                 "season": row[2],
                 "cover_path": row[3],
-                "genres": row[4] or "未知"
+                "genres": (row[4] or "").split(', ') if row[4] else []
             })
             
         cur.close()

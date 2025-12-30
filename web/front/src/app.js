@@ -18,7 +18,8 @@ async function initApp() {
 
 async function showList() {
     try {
-        state.currentAnimations = await api.fetchAnimations();
+        const response = await api.fetchAnimations();
+        state.currentAnimations = response.data || [];
     } catch (e) {
         console.error('Fetch error:', e);
         // Even if fetch fails, we want to show the list view (empty) so user can see buttons
@@ -41,14 +42,22 @@ function renderCurrentList() {
 
 async function showDetail(aid) {
     try {
-        const detail = await api.fetchAnimationDetail(aid);
+        const response = await api.fetchAnimationDetail(aid);
+        const detail = response.data;
         
+        if (!detail) throw new Error('No data in response');
+
         ui.elements.detailImage.src = detail.cover_path || detail.cover || 'https://via.placeholder.com/600x400?text=No+Image';
         ui.elements.detailTitle.innerText = detail.name;
         
         // 构建详细信息HTML
         let infoHtml = '';
-        if (detail.company && detail.company.name) infoHtml += `<p><strong>制作公司:</strong> ${detail.company.name}</p>`;
+        if (detail.company && detail.company.name) {
+            infoHtml += `<p><strong>制作公司:</strong> ${detail.company.name}`;
+            if (detail.company.address) infoHtml += `&emsp;&emsp;<strong>地区：</strong>${detail.company.address}`;
+            if (detail.company.president) infoHtml += `&emsp;&emsp;<strong>制作人：</strong>${detail.company.president}`;
+            infoHtml += `</p>`;
+        }
         if (detail.season) infoHtml += `<p><strong>季度:</strong> ${detail.season}</p>`;
         if (detail.genres && detail.genres.length > 0) infoHtml += `<p><strong>类型:</strong> ${detail.genres.join(', ')}</p>`;
         if (detail.introduction) infoHtml += `<p><strong>简介:</strong> ${detail.introduction}</p>`;
@@ -60,43 +69,31 @@ async function showDetail(aid) {
             ui.elements.characterGrid.innerHTML = ''; // 清空之前的内容
             
             if (detail.characters && detail.characters.length > 0) {
-                // 添加标题
-                const charTitle = document.createElement('h3');
-                charTitle.innerText = '角色信息';
-                charTitle.style.marginTop = '20px';
-                ui.elements.characterGrid.parentNode.insertBefore(charTitle, ui.elements.characterGrid);
+                // 显示标题
+                if (ui.elements.charTitle) ui.elements.charTitle.style.display = 'block';
 
                 detail.characters.forEach(char => {
                     const charCard = document.createElement('div');
-                    charCard.className = 'character-card';
-                    charCard.style.display = 'flex';
-                    charCard.style.alignItems = 'center';
-                    charCard.style.marginBottom = '10px';
-                    charCard.style.padding = '10px';
-                    charCard.style.border = '1px solid #eee';
-                    charCard.style.borderRadius = '4px';
+                    charCard.className = 'char-card'; // Use CSS class defined in index.html
 
-                    const charImgSrc = char.cover_path || 'https://via.placeholder.com/50';
+                    const charImgSrc = char.cover_path || char.cover || 'https://via.placeholder.com/150x120?text=No+Img';
                     
-                    let charInfo = `<strong>${char.name}</strong>`;
-                    if (char.sex) charInfo += ` (${char.sex})`;
-                    if (char.personality) charInfo += `<br>性格: ${char.personality}`;
+                    let charInfo = `<div style="font-weight:bold; margin:5px 0;">${char.name}</div>`;
+                    if (char.sex) charInfo += `<div style="font-size:12px; color:#666;">${char.sex}</div>`;
                     
                     // CV 信息
                     if (char.voice_actor) {
-                        charInfo += `<br>CV: ${char.voice_actor}`;
-                        if (char.voice_actor_age) charInfo += ` (${char.voice_actor_age}岁)`;
+                        charInfo += `<div style="font-size:12px; color:#666; margin-top:5px;">CV: ${char.voice_actor}</div>`;
                     }
 
                     charCard.innerHTML = `
-                        <img src="${charImgSrc}" alt="${char.name}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-right: 15px;">
-                        <div>${charInfo}</div>
+                        <img src="${charImgSrc}" alt="${char.name}">
+                        ${charInfo}
                     `;
                     ui.elements.characterGrid.appendChild(charCard);
                 });
             } else {
-                // 如果没有角色信息，移除可能存在的旧标题（简单处理，实际上init时清空更佳，这里假设每次重建）
-                // 更好的做法是在HTML里放个容器专门装角色部分
+                if (ui.elements.charTitle) ui.elements.charTitle.style.display = 'none';
             }
         }
 
