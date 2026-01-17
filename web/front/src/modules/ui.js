@@ -9,7 +9,11 @@ export const elements = {
     detailTitle: null,
     detailDesc: null,
     characterGrid: null,
-    charTitle: null
+    charTitle: null,
+    charModal: null,
+    charModalImage: null,
+    charModalName: null,
+    charModalInfo: null
 };
 
 export function initDomElements() {
@@ -23,6 +27,19 @@ export function initDomElements() {
     elements.detailDesc = document.getElementById('detailDesc');
     elements.characterGrid = document.getElementById('characterGrid');
     elements.charTitle = document.getElementById('charTitle');
+
+    elements.charModal = document.getElementById('charModal');
+    elements.charModalImage = document.getElementById('charModalImage');
+    elements.charModalName = document.getElementById('charModalName');
+    elements.charModalInfo = document.getElementById('charModalInfo');
+
+    const closeBtn = document.getElementById('charModalClose');
+    if (closeBtn) closeBtn.onclick = hideCharacterModal;
+    if (elements.charModal) {
+        elements.charModal.addEventListener('click', (e) => {
+            if (e.target === elements.charModal) hideCharacterModal();
+        });
+    }
 }
 
 export function switchView(targetView) {
@@ -110,7 +127,7 @@ export function renderDetail(data, onBack) {
             const charCard = document.createElement('div');
             charCard.className = 'char-card';
             charCard.innerHTML = `
-                <img src="${char.cover_path || char.cover}" alt="${char.name}" onerror="this.src='https://via.placeholder.com/150x120?text=No+Img'">
+                <img src="${char.cover_path || char.cover}" alt="${char.name}" onerror="this.src='https://via.placeholder.com/150x220?text=No+Img'">
                 <div style="font-weight:bold; margin-top:5px; font-size:14px;">${char.name}</div>
             `;
             elements.characterGrid.appendChild(charCard);
@@ -124,4 +141,35 @@ export function renderDetail(data, onBack) {
     if (backBtn) backBtn.onclick = onBack;
 
     switchView(elements.detailView);
+}
+
+export function showCharacterModal(char) {
+    if (!elements.charModal) return;
+    elements.charModal.style.display = 'flex';
+
+    if (elements.charModalImage) {
+        elements.charModalImage.src = char.cover_path || char.cover || 'https://via.placeholder.com/300x400?text=No+Img';
+    }
+
+    if (elements.charModalName) {
+        elements.charModalName.textContent = char.name || '';
+    }
+
+    if (elements.charModalInfo) {
+        const parts = [];
+        if (char.sex) parts.push('性别：' + char.sex);
+        if (char.voice_actor) {
+            let cv = 'CV：' + char.voice_actor;
+            if (char.voice_actor_age) cv += '（' + char.voice_actor_age + '岁）';
+            parts.push(cv);
+        }
+        if (char.personality) parts.push('性格：' + char.personality);
+        elements.charModalInfo.textContent = parts.join(' | ');
+    }
+}
+
+export function hideCharacterModal() {
+    if (elements.charModal) {
+        elements.charModal.style.display = 'none';
+    }
 }

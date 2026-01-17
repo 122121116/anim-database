@@ -90,6 +90,7 @@ async function showDetail(aid) {
                         <img src="${charImgSrc}" alt="${char.name}">
                         ${charInfo}
                     `;
+                    charCard.onclick = () => ui.showCharacterModal(char);
                     ui.elements.characterGrid.appendChild(charCard);
                 });
             } else {
